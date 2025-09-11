@@ -9,9 +9,10 @@ const safetyCatch = require('safety-catch')
 const byteSize = require('tiny-byte-size')
 const pino = require('pino')
 const b4a = require('b4a')
-const hypCrypto = require('hypercore-crypto')
+const { recordToStr, streamToStr, coreToInfo } = require('./lib/to_string')
 
 const BlindPeer = require('.')
+const startServer = require('./server')
 
 const SERVICE_NAME = 'blind-peer'
 const DEFAULT_STORAGE_LIMIT_MB = 100_000
@@ -29,6 +30,7 @@ const cmd = command('blind-peer',
   flag('--scraper-secret [scraper-secret]', 'Secret of the dht-prometheus scraper.  Can be hex or z32.'),
   flag('--scraper-alias [scraper-alias]', '(optional) Alias with which to register to the scraper'),
   flag('--repl [repl]', 'Expose a repl-swarm at the passed-in seed (32 bytes in hex or z32 notation). Use for debugging only.'),
+  flag('--server [port]', 'Start a management server on the specified port'),
   async function ({ flags }) {
     const debug = flags.debug
     const logger = pino({
@@ -44,6 +46,11 @@ const cmd = command('blind-peer',
     const trustedPubKeys = (flags.trustedPeer || []).map(k => idEnc.decode(k))
 
     const blindPeer = new BlindPeer(storage, { trustedPubKeys, maxBytes, port })
+    
+    if(flags.server) {
+      logger.info(`Starting server on port ${flags.server}`)
+      startServer(blindPeer, debug)
+    }
 
     blindPeer.on('flush-error', e => {
       logger.warn(`Error while flushing the db: ${e.stack}`)
@@ -187,20 +194,5 @@ const cmd = command('blind-peer',
     logger.info(`Encryption public key is ${idEnc.normalize(blindPeer.encryptionPublicKey)}`)
   }
 )
-
-function recordToStr (record) {
-  const discKey = hypCrypto.discoveryKey(record.key)
-  return `DB Record for discovery key ${idEnc.normalize(discKey)} with priority: ${record.priority}. Announcing? ${record.announce}`
-}
-
-function streamToStr (stream) {
-  const pubKey = idEnc.normalize(stream.remotePublicKey)
-  return `${pubKey}`
-}
-
-function coreToInfo (core) {
-  const discKey = hypCrypto.discoveryKey(core.key)
-  return `Discovery key ${idEnc.normalize(discKey)} (${core.contiguousLength} / ${core.length}, ${core.peers.length} peers)`
-}
 
 cmd.parse()
