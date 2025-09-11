@@ -21,14 +21,14 @@ let id = 0;
 
 class SSELogger {
   #stream = null;
-  #events = "";
+  #events = [];
 
   constructor(stream) {
     this.#stream = stream;
   }
 
   async #writeLogs(eventType, level, data, meta) {
-    this.#events =
+    this.#events.push(
       html`<div class="event log-${level}">
         <div class="log-header">
           <span class="log-timestamp">${new Date().toISOString()}</span>
@@ -41,10 +41,15 @@ class SSELogger {
         ${meta
           ? html`<pre class="log-meta">${JSON.stringify(meta, null, 2)}</pre>`
           : ""}
-      </div>` + this.#events;
+      </div>`,
+    );
+
+    if (this.#events.length > 100) {
+      this.#events.shift();
+    }
 
     await this.#stream.writeSSE({
-      data: this.#events,
+      data: this.#events.join("\n"),
       event: "logs",
       id: String(id++),
     });
@@ -275,22 +280,60 @@ module.exports = function startServer(blindPeer, debug) {
       return c.json(localAddress);
     }
 
-    const trustedKeys = [...blindPeer.trustedPubKeys]
-      .map((key) => `<li>${key}</li>`)
-      .join("");
-
     return c.html(html`
-      <div>
-        <h2>Config</h2>
-        <h3>Local Address</h3>
-        <p>Host: ${localAddress.host}</p>
-        <p>Port: ${localAddress.port}</p>
-        <p>Address: ${idEnc.normalize(blindPeer.publicKey)}</p>
+      <div class="network-info">
+        <h2>Network Configuration</h2>
 
-        <h3>Trusted Keys</h3>
-        <ul>
-          ${html(trustedKeys)}
-        </ul>
+        <div class="network-section">
+          <h3>Local Node</h3>
+          <div class="network-card">
+            <div class="network-item">
+              <label>Host:</label>
+              <span class="network-value">${localAddress.host}</span>
+            </div>
+            <div class="network-item">
+              <label>Port:</label>
+              <span class="network-value">${localAddress.port}</span>
+            </div>
+            <div class="network-item">
+              <label>Public Key:</label>
+              <span class="network-key"
+                >${idEnc.normalize(blindPeer.publicKey)}</span
+              >
+              <button
+                class="copy-btn"
+                onclick="navigator.clipboard.writeText('${idEnc.normalize(
+                  blindPeer.publicKey,
+                )}')"
+              >
+                📋
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="network-section">
+          <h3>Trusted Peers</h3>
+          ${blindPeer.trustedPubKeys.size > 0
+            ? html`<div class="trusted-keys">
+                ${[...blindPeer.trustedPubKeys].map(
+                  (key) => html`
+                    <div class="trusted-key-item">
+                      <span class="trusted-key">${key}</span>
+                      <button
+                        class="copy-btn"
+                        onclick="navigator.clipboard.writeText('${key}')"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  `,
+                )}
+              </div>`
+            : `<div class="no-trusted-keys">
+                <p>No trusted peers configured</p>
+              </div>`}
+        </div>
       </div>
     `);
   });
@@ -312,6 +355,11 @@ module.exports = function startServer(blindPeer, debug) {
             ></script>
           </head>
           <style>
+
+            :root {
+                --primary-color: rgb(176,217,68);
+            }
+
             body {
               color: rgb(255, 255, 254);
               background-color: rgb(29, 29, 29);
@@ -323,19 +371,17 @@ module.exports = function startServer(blindPeer, debug) {
             h1 {
               text-align: center;
               margin: 20px 0 40px 0;
-              color: #4a9eff;
+              color: var(--primary-color);
             }
             h2 {
-              color: #4a9eff;
+              color: var(--primary-color);
               margin-bottom: 20px;
               font-size: 24px;
             }
 
             details {
               display: block;
-              margin-bottom: 16px;
               border-radius: 16px;
-              background-color: rgba(255, 255, 255, 0.05);
 
               & > div {
                 padding: 16px;
@@ -408,7 +454,7 @@ module.exports = function startServer(blindPeer, debug) {
 
             /* Log level specific styling */
             .log-info {
-              border-left-color: #4a9eff;
+              border-left-color: var(--primary-color);
               background-color: rgba(74, 158, 255, 0.05);
             }
 
@@ -445,7 +491,7 @@ module.exports = function startServer(blindPeer, debug) {
             }
 
             .log-event-type {
-              color: #4a9eff;
+              color: var(--primary-color);
               font-weight: bold;
               font-size: 12px;
               text-transform: uppercase;
@@ -461,7 +507,7 @@ module.exports = function startServer(blindPeer, debug) {
             }
 
             .log-level-info {
-              background-color: #4a9eff;
+              background-color: var(--primary-color);
               color: #000;
             }
 
@@ -520,11 +566,6 @@ module.exports = function startServer(blindPeer, debug) {
               background: rgba(255, 255, 255, 0.5);
             }
 
-            /* Core container styling */
-            .cores-container {
-              margin-top: 20px;
-            }
-
             .cores-grid {
               display: grid;
               grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -548,7 +589,7 @@ module.exports = function startServer(blindPeer, debug) {
             }
 
             .core-card.announcing {
-              border-left: 4px solid #4a9eff;
+              border-left: 4px solid var(--primary-color);
             }
 
             .core-card.inactive {
@@ -573,7 +614,7 @@ module.exports = function startServer(blindPeer, debug) {
             }
 
             .status-active {
-              background-color: #4a9eff;
+              background-color: var(--primary-color);
               box-shadow: 0 0 8px rgba(74, 158, 255, 0.5);
             }
 
@@ -606,9 +647,10 @@ module.exports = function startServer(blindPeer, debug) {
 
             .key-value {
               font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
-              color: #4a9eff;
+              color: var(--primary-color);
               font-size: 13px;
               flex: 1;
+              overflow-x: hidden;
             }
 
             .copy-btn {
@@ -686,7 +728,7 @@ module.exports = function startServer(blindPeer, debug) {
             }
 
             .referrer-label {
-              color: #4a9eff;
+              color: var(--primary-color);
               font-size: 11px;
               font-weight: bold;
               margin-right: 8px;
@@ -705,13 +747,151 @@ module.exports = function startServer(blindPeer, debug) {
               font-style: italic;
             }
 
+            /* Main layout styling */
+            .main-header {
+              text-align: center;
+              padding: 20px 0;
+              border-bottom: 2px solid rgba(74, 158, 255, 0.3);
+              margin-bottom: 30px;
+            }
+
+            .main-header h1 {
+              margin: 0;
+              color: var(--primary-color);
+              font-size: 28px;
+              font-weight: bold;
+            }
+
+            .main-container {
+              max-width: 1400px;
+              margin: 0 auto;
+              padding: 0 20px;
+            }
+
+            .network-section-wrapper,
+            .cores-section,
+            .logs-section {
+              margin-bottom: 40px;
+              background-color: rgba(255, 255, 255, 0.01);
+              border: 1px solid rgba(255, 255, 255, 0.05);
+              border-radius: 10px;
+            }
+
+            .loading-indicator {
+              text-align: center;
+              padding: 20px;
+              color: var(--primary-color);
+              font-style: italic;f
+            }
+
+            /* Network info styling */
+            .network-info {
+              margin: 0;
+            }
+
+            .network-info h2 {
+              color: var(--primary-color);
+              margin-bottom: 20px;
+              font-size: 24px;
+              text-align: center;
+            }
+
+            .network-section {
+              margin-bottom: 30px;
+            }
+
+            .network-section h3 {
+              color: #fff;
+              margin-bottom: 15px;
+              font-size: 18px;
+              border-bottom: 2px solid var(--primary-color);
+              padding-bottom: 8px;
+            }
+
+            .network-card {
+              background-color: rgba(255, 255, 255, 0.02);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              border-radius: 8px;
+              padding: 20px;
+              border-left: 4px solid var(--primary-color);
+            }
+
+            .network-item {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 12px;
+              padding: 8px 0;
+            }
+
+            .network-item:last-child {
+              margin-bottom: 0;
+            }
+
+            .network-item label {
+              color: #888;
+              font-size: 14px;
+              font-weight: bold;
+              min-width: 80px;
+            }
+
+            .network-value {
+              color: #fff;
+              font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+              font-size: 14px;
+            }
+
+            .network-key {
+              color: var(--primary-color);
+              font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+              font-size: 13px;
+              flex: 1;
+            }
+
+            .trusted-keys {
+              display: grid;
+              gap: 10px;
+            }
+
+            .trusted-key-item {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 12px;
+              background-color: rgba(255, 255, 255, 0.02);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              border-radius: 6px;
+              transition: background-color 0.2s ease;
+            }
+
+            .trusted-key-item:hover {
+              background-color: rgba(255, 255, 255, 0.05);
+            }
+
+            .trusted-key {
+              color: var(--primary-color);
+              font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+              font-size: 13px;
+              flex: 1;
+            }
+
+            .no-trusted-keys {
+              text-align: center;
+              padding: 20px;
+              color: #888;
+              font-style: italic;
+              background-color: rgba(255, 255, 255, 0.02);
+              border: 1px solid rgba(255, 255, 255, 0.05);
+              border-radius: 6px;
+            }
+
             /* Cores section styling */
             .cores-section {
-              margin: 30px 0;
+              position: relative;
             }
 
             .load-cores-btn {
-              background: linear-gradient(135deg, #4a9eff, #357abd);
+              background: linear-gradient(135deg, var(--primary-color), #357abd);
               border: none;
               color: white;
               padding: 12px 24px;
@@ -735,7 +915,7 @@ module.exports = function startServer(blindPeer, debug) {
 
             .htmx-indicator {
               display: none;
-              color: #4a9eff;
+              color: var(--primary-color);
               font-style: italic;
               margin-left: 10px;
             }
@@ -746,28 +926,41 @@ module.exports = function startServer(blindPeer, debug) {
           </style>
         </head>
         <body>
-          <h1>Blind Peer</h1>
+          <div class="main-container">
+            <div class="main-header">
+              <h1>Blind Peer</h1>
+            </div>
 
-          <div hx-get="/blind-peer" hx-trigger="load">
-            <span hx-indicator="true">Loading...</span>
-          </div>
+            <div class="network-section-wrapper">
+              <div hx-get="/blind-peer" hx-trigger="load">
+                <div class="loading-indicator">
+                  <span hx-indicator="true"
+                    >Loading network configuration...</span
+                  >
+                </div>
+              </div>
+            </div>
 
-          <div hx-get="/cores" hx-trigger="load">
-            <span hx-indicator="true">Loading...</span>
-          </div>
+            <div class="cores-section">
+              <div hx-get="/cores" hx-trigger="load">
+                <div class="loading-indicator">
+                  <span hx-indicator="true">Loading cores...</span>
+                </div>
+              </div>
+            </div>
 
-          <details>
-            <summary>
-              <h2>Logs</h2>
-            </summary>
+            <details class="logs-section">
+              <summary>
+                <h2>Logs</h2>
+              </summary>
 
-            <div
-              class="logs"
-              hx-ext="sse"
-              sse-connect="/sse"
-              sse-swap="logs"
-            ></div>
-          </details>
+              <div
+                class="logs"
+                hx-ext="sse"
+                sse-connect="/sse"
+                sse-swap="logs"
+              ></div>
+            </details>
         </body>
       </html>`,
     );
