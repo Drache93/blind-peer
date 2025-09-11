@@ -97,87 +97,77 @@ module.exports = function startServer(blindPeer, port, debug) {
     }
 
     return c.html(html`
-      <details class="cores-container">
-        <summary>
-          <h2>Active Cores</h2>
-        </summary>
-
-        <div class="cores-grid">
-          ${coresData.map(
-            (core) => html`
-              <div
-                class="core-card ${core.announce ? "announcing" : "inactive"}"
-              >
-                <div class="core-header">
-                  <div
-                    class="core-status ${core.announce
-                      ? "status-active"
-                      : "status-inactive"}"
-                  ></div>
-                  <span class="core-priority">Priority: ${core.priority}</span>
-                </div>
-                <div class="core-key">
-                  <label>Key:</label>
-                  <span class="key-value">${core.key}</span>
-                  <button
-                    class="copy-btn"
-                    onclick="navigator.clipboard.writeText('${core.key}')"
-                  >
-                    📋
-                  </button>
-                </div>
-                <div class="core-stats">
-                  <div class="stat">
-                    <span class="stat-label">Length:</span>
-                    <span class="stat-value"
-                      >${core.length.toLocaleString()}</span
-                    >
-                  </div>
-                  <div class="stat">
-                    <span class="stat-label">Size:</span>
-                    <span class="stat-value"
-                      >${byteSize(core.bytesAllocated)}</span
-                    >
-                  </div>
-                  <div class="stat">
-                    <span class="stat-label">Cleared:</span>
-                    <span class="stat-value"
-                      >${byteSize(core.bytesCleared)}</span
-                    >
-                  </div>
-                </div>
-                <div class="core-timestamps">
-                  <div class="timestamp">
-                    <span class="timestamp-label">Updated:</span>
-                    <span class="timestamp-value"
-                      >${new Date(core.updated).toLocaleString()}</span
-                    >
-                  </div>
-                  <div class="timestamp">
-                    <span class="timestamp-label">Active:</span>
-                    <span class="timestamp-value"
-                      >${new Date(core.active).toLocaleString()}</span
-                    >
-                  </div>
-                </div>
-                ${core.referrer ??
-                html`
-                  <div class="core-referrer">
-                    <span class="referrer-label">Referrer:</span>
-                    <span class="referrer-value">${core.referrer}</span>
-                  </div>
-                `}
+      <div class="cores-grid">
+        ${coresData.map(
+          (core) => html`
+            <div class="core-card ${core.announce ? "announcing" : "inactive"}">
+              <div class="core-header">
+                <div
+                  class="core-status ${core.announce
+                    ? "status-active"
+                    : "status-inactive"}"
+                ></div>
+                <span class="core-priority">Priority: ${core.priority}</span>
               </div>
-            `,
-          )}
+              <div class="core-key">
+                <label>Key:</label>
+                <span class="key-value">${core.key}</span>
+                <button
+                  class="copy-btn"
+                  onclick="navigator.clipboard.writeText('${core.key}')"
+                >
+                  📋
+                </button>
+              </div>
+              <div class="core-stats">
+                <div class="stat">
+                  <span class="stat-label">Length:</span>
+                  <span class="stat-value"
+                    >${core.length.toLocaleString()}</span
+                  >
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Size:</span>
+                  <span class="stat-value"
+                    >${byteSize(core.bytesAllocated)}</span
+                  >
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Cleared:</span>
+                  <span class="stat-value">${byteSize(core.bytesCleared)}</span>
+                </div>
+              </div>
+              <div class="core-timestamps">
+                <div class="timestamp">
+                  <span class="timestamp-label">Updated:</span>
+                  <span class="timestamp-value"
+                    >${new Date(core.updated).toLocaleString()}</span
+                  >
+                </div>
+                <div class="timestamp">
+                  <span class="timestamp-label">Active:</span>
+                  <span class="timestamp-value"
+                    >${new Date(core.active).toLocaleString()}</span
+                  >
+                </div>
+              </div>
+              ${core.referrer ??
+              html`
+                <div class="core-referrer">
+                  <span class="referrer-label">Referrer:</span>
+                  <span class="referrer-value">${core.referrer}</span>
+                </div>
+              `}
+            </div>
+          `,
+        )}
+      </div>
+      ${coresData.length === 0 ??
+      html`
+        <div class="no-cores">
+          <p>No cores found</p>
         </div>
-        ${coresData.length === 0 ??
-        html`
-          <div class="no-cores">
-            <p>No cores found</p>
-          </div>
-        `}
-      </details>
+      `}
     `);
   });
 
@@ -982,13 +972,18 @@ module.exports = function startServer(blindPeer, port, debug) {
               </div>
             </div>
 
-            <div class="cores-section">
+
+            <details class="cores-section">
+                <summary>
+                <h2>Active Cores</h2>
+                </summary>
+
               <div class="cores-container" hx-get="/cores" hx-trigger="sse:cores">
                 <div class="loading-indicator">
                   <span hx-indicator="true">Loading cores...</span>
                 </div>
               </div>
-            </div>
+            </details>
 
             <details class="logs-section">
               <summary>
