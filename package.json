@@ -46,6 +46,7 @@
   "files": [
     "bin.js",
     "index.js",
+    "server.js",
     "lib/"
   ],
   "scripts": {
