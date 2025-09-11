@@ -87,8 +87,11 @@ module.exports = function startServer(blindPeer, debug) {
     }
 
     return c.html(html`
-      <div class="cores-container">
-        <h2>Active Cores</h2>
+      <details class="cores-container">
+        <summary>
+          <h2>Active Cores</h2>
+        </summary>
+
         <div class="cores-grid">
           ${coresData.map(
             (core) => html`
@@ -164,7 +167,7 @@ module.exports = function startServer(blindPeer, debug) {
             <p>No cores found</p>
           </div>
         `}
-      </div>
+      </details>
     `);
   });
 
@@ -321,6 +324,46 @@ module.exports = function startServer(blindPeer, debug) {
               text-align: center;
               margin: 20px 0 40px 0;
               color: #4a9eff;
+            }
+            h2 {
+              color: #4a9eff;
+              margin-bottom: 20px;
+              font-size: 24px;
+            }
+
+            details {
+              display: block;
+              margin-bottom: 16px;
+              border-radius: 16px;
+              background-color: rgba(255, 255, 255, 0.05);
+
+              & > div {
+                padding: 16px;
+              }
+            }
+
+            summary {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              cursor: pointer;
+              padding: 0px 8px;
+              margin-bottom: 4px;
+              border-radius: 16px;
+              transition: background-color 0.3s ease;
+
+              &:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+              }
+
+              &:after {
+                content: "+";
+                margin-right: 8px;
+              }
+
+              &:h2 {
+                display: inline;
+              }
             }
 
             /* Log container styling */
@@ -480,12 +523,6 @@ module.exports = function startServer(blindPeer, debug) {
             /* Core container styling */
             .cores-container {
               margin-top: 20px;
-            }
-
-            .cores-container h2 {
-              color: #4a9eff;
-              margin-bottom: 20px;
-              font-size: 24px;
             }
 
             .cores-grid {
@@ -719,12 +756,18 @@ module.exports = function startServer(blindPeer, debug) {
             <span hx-indicator="true">Loading...</span>
           </div>
 
-          <div
-            class="logs"
-            hx-ext="sse"
-            sse-connect="/sse"
-            sse-swap="logs"
-          ></div>
+          <details>
+            <summary>
+              <h2>Logs</h2>
+            </summary>
+
+            <div
+              class="logs"
+              hx-ext="sse"
+              sse-connect="/sse"
+              sse-swap="logs"
+            ></div>
+          </details>
         </body>
       </html>`,
     );
