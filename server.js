@@ -49,7 +49,7 @@ class SSELogger {
     }
 
     await this.#stream.writeSSE({
-      data: this.#events.join("\n"),
+      data: this.#events.reverse().join("\n"),
       event: "logs",
       id: String(id++),
     });
