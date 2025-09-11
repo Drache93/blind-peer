@@ -49,7 +49,7 @@ const cmd = command('blind-peer',
     
     if(flags.server) {
       logger.info(`Starting server on port ${flags.server}`)
-      startServer(blindPeer, debug)
+      startServer(blindPeer, flags.server, debug)
     }
 
     blindPeer.on('flush-error', e => {

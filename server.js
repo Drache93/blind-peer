@@ -69,7 +69,7 @@ class SSELogger {
   }
 }
 
-module.exports = function startServer(blindPeer, debug) {
+module.exports = function startServer(blindPeer, port, debug) {
   const logger = pino({
     level: debug ? "debug" : "info",
     name: "blind-peer-server",
@@ -86,6 +86,11 @@ module.exports = function startServer(blindPeer, debug) {
         key: b4a.toString(core.key, "hex"),
       });
     }
+
+    // {"key":"","length":0,"bytesAllocated":0,"updated":1757604624191,"active":1757604624191,"priority":0,"announce":true,"referrer":null,"blocksCleared":0,"bytesCleared":0
+
+    // Sort by byteSize
+    coresData.sort((a, b) => b.bytesAllocated - a.bytesAllocated);
 
     if (!isHtmxRequest(c)) {
       return c.json(coresData);
@@ -180,12 +185,18 @@ module.exports = function startServer(blindPeer, debug) {
     return streamSSE(c, async (stream) => {
       const sseLogger = new SSELogger(stream);
 
-      blindPeer.on("add-core", (record, _, stream) => {
+      blindPeer.on("add-core", (record, _, coreStream) => {
         try {
           sseLogger.info(
             "add-core",
-            `Record: ${recordToStr(record)}, Stream: ${streamToStr(stream)}`,
+            `Record: ${recordToStr(record)}, Stream: ${streamToStr(coreStream)}`,
           );
+
+          stream.writeSSE({
+            event: "cores",
+            data: "",
+            id: id++,
+          });
         } catch (e) {
           sseLogger.warn(
             "add-core",
@@ -221,18 +232,36 @@ module.exports = function startServer(blindPeer, debug) {
           "announce-core",
           `Started announcing core ${coreToInfo(core)}`,
         );
+
+        stream.writeSSE({
+          event: "cores",
+          data: "",
+          id: id++,
+        });
       });
       blindPeer.on("core-downloaded", (core) => {
         sseLogger.info(
           "core-downloaded",
           `Announced core fully downloaded: ${coreToInfo(core)}`,
         );
+
+        stream.writeSSE({
+          event: "cores",
+          data: "",
+          id: id++,
+        });
       });
       blindPeer.on("core-append", (core) => {
         sseLogger.info(
           "core-append",
           `Detected announced-core length update: ${coreToInfo(core)}`,
         );
+
+        stream.writeSSE({
+          event: "cores",
+          data: "",
+          id: id++,
+        });
       });
 
       blindPeer.on("gc-start", ({ bytesToClear }) => {
@@ -246,6 +275,12 @@ module.exports = function startServer(blindPeer, debug) {
           "gc-done",
           `Completed GC, cleared ${byteSize(bytesCleared)} bytes (bytes allocated: ${byteSize(blindPeer.digest.bytesAllocated)} of ${byteSize(blindPeer.maxBytes)})`,
         );
+
+        stream.writeSSE({
+          event: "cores",
+          data: "",
+          id: id++,
+        });
       });
       if (debug) {
         blindPeer.on("core-activity", (core) => {
@@ -267,6 +302,12 @@ module.exports = function startServer(blindPeer, debug) {
       });
 
       sseLogger.info("startup", "Listening to Blind Peer logs");
+
+      stream.writeSSE({
+        event: "cores",
+        data: "",
+        id: id++,
+      });
 
       while (true) {
         await stream.sleep(1000);
@@ -926,7 +967,7 @@ module.exports = function startServer(blindPeer, debug) {
           </style>
         </head>
         <body>
-          <div class="main-container">
+          <div class="main-container" hx-ext="sse" sse-connect="/sse">
             <div class="main-header">
               <h1>Blind Peer</h1>
             </div>
@@ -942,7 +983,7 @@ module.exports = function startServer(blindPeer, debug) {
             </div>
 
             <div class="cores-section">
-              <div hx-get="/cores" hx-trigger="load">
+              <div class="cores-container" hx-get="/cores" hx-trigger="sse:cores">
                 <div class="loading-indicator">
                   <span hx-indicator="true">Loading cores...</span>
                 </div>
@@ -956,8 +997,6 @@ module.exports = function startServer(blindPeer, debug) {
 
               <div
                 class="logs"
-                hx-ext="sse"
-                sse-connect="/sse"
                 sse-swap="logs"
               ></div>
             </details>
@@ -965,6 +1004,8 @@ module.exports = function startServer(blindPeer, debug) {
       </html>`,
     );
   });
+
+  app.port = port;
 
   serve(app);
 };
