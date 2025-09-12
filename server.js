@@ -818,6 +818,7 @@ module.exports = function startServer(blindPeer, port, debug) {
             /* Network info styling */
             .network-info {
               margin: 0;
+              padding: 0 16px;
             }
 
             .network-info h2 {
