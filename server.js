@@ -812,7 +812,7 @@ module.exports = function startServer(blindPeer, port, debug) {
               text-align: center;
               padding: 20px;
               color: var(--primary-color);
-              font-style: italic;f
+              font-style: italic;
             }
 
             /* Network info styling */
